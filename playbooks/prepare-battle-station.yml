@@ -1,0 +1,6 @@
+---
+- name: Configure provided host(s)
+  hosts: "{{ target | default('windows') }}"
+  gather_facts: true
+  roles:
+    - battle-station

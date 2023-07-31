@@ -1,0 +1,114 @@
+---
+- name: Enable CredSSP
+  ansible.windows.win_shell: Enable-WSManCredSSP -Role Server -Force
+  when: '"Server" in ansible_distribution'
+
+- name: Install Remote Desktop Services feature
+  win_rds_role:
+    role: RDS-RD-Server
+    state: present
+  become: yes
+  become_method: runas
+
+- name: Allow Remote Desktop through Windows Firewall
+  win_firewall_rule:
+    name: "Allow Remote Desktop"
+    description: "Allow incoming Remote Desktop connections"
+    localport: "3389"
+    direction: "in"
+    action: "allow"
+    enabled: yes
+  become: yes
+  become_method: runas
+
+- name: Load prerequisites
+  ansible.builtin.include_vars: software.yml
+  tags:
+    - software
+
+- name: Install software
+  chocolatey.chocolatey.win_chocolatey:
+    name: "{{ item.name }}"
+  with_items: "{{ software }}"
+  tags:
+    - software
+    
+- name: Set PowerShell Core as default shell
+      win_shell: |
+        $registryPath = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\ShellCommandVerb"
+        Set-ItemProperty -Path $registryPath -Name PowerShell -Value "C:\Program Files\PowerShell\7\pwsh.exe"
+      become: yes
+      become_method: runas
+
+- name: Install NetFx3 (needed for wsl) and WSL
+  ansible.windows.win_optional_feature:
+    name:
+      - NetFx3
+      - Microsoft-Windows-Subsystem-Linux
+    state: present
+  tags:
+    - wsl
+
+- name: Enable Hyper-V
+  ansible.windows.win_shell:
+    Enable-WindowsOptionalFeature -Name Hyper-V -IncludeManagementTools
+  tags:
+    - wsl
+
+- name: Enable WSL
+  win_shell: dism.exe /online /enable-feature /featurename:Microsoft-Windows-Subsystem-Linux /all /norestart
+  become: yes
+  become_method: runas
+  tags:
+    - wsl 
+
+- name: Restart the host (if required)
+  win_reboot:
+  become: yes
+  become_method: runas
+  when: "ansible_reboot_pending | bool"
+  tags:
+    - wsl 
+
+- name: Download and Install the latest Ubuntu distribution
+  win_shell: |
+    $url = 'https://aka.ms/wslubuntu2004'
+    $output = 'C:\temp\Ubuntu.appx'
+    Invoke-WebRequest -Uri $url -OutFile $output
+    Add-AppxPackage -Path $output
+  become: yes
+  become_method: runas
+  tags:
+    - wsl 
+
+- name: Set new hostname
+  win_hostname:
+    name: Android3
+  become: yes
+  become_method: runas
+
+- name: Download Docker Desktop installer
+  win_get_url:
+    url: https://desktop.docker.com/win/stable/Docker%20Desktop%20Installer.exe
+    dest: C:\Temp\DockerDesktopInstaller.exe
+  become: yes
+  become_method: runas
+
+- name: Install Docker Desktop silently
+  win_shell: Start-Process -Wait -FilePath "C:\Temp\DockerDesktopInstaller.exe" -ArgumentList "/S"
+  become: yes
+  become_method: runas
+
+- name: Remove Docker Desktop installer
+  win_file:
+    path: C:\Temp\DockerDesktopInstaller.exe
+    state: absent
+  become: yes
+  become_method: runas
+  
+- name: Restart the host (if required)
+  win_reboot:
+  become: yes
+  become_method: runas
+  when: "ansible_reboot_pending | bool"
+
