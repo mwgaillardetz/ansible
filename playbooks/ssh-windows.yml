@@ -1,0 +1,51 @@
+---
+- name: Install and configure SSH on Windows
+  hosts: "{{ target | default('windows') }}"
+  tasks:
+    - name: Check Windows version
+      win_shell: |
+        $osVersion = (Get-WmiObject -Class Win32_OperatingSystem).Version
+        Write-Host "Windows Version: $osVersion"
+      register: windows_version
+
+    - name: Download OpenSSH installer
+      win_get_url:
+        url: https://github.com/PowerShell/Win32-OpenSSH/releases/download/v8.1.0.0p1-Beta/OpenSSH-Win64.zip
+        dest: C:\Temp\OpenSSH-Win64.zip
+      when: windows_version.stdout.startswith("10.0.14393")
+
+    - name: Unzip OpenSSH installer
+      win_unzip:
+        src: C:\Temp\OpenSSH-Win64.zip
+        dest: C:\Temp\OpenSSH
+      when: windows_version.stdout.startswith("10.0.14393")
+
+    - name: Install OpenSSH
+      win_shell: |
+        cd C:\Temp\OpenSSH\OpenSSH-Win64
+        .\install-sshd.ps1
+      when: windows_version.stdout.startswith("10.0.14393")
+
+    - name: Enable OpenSSH Server feature - used for servers 2019 and above
+      win_feature:
+        name: OpenSSH-Server
+        state: present
+      when: ansible_facts['os_version'] >= '10.0.17763'
+
+    - name: Start OpenSSH service
+      win_service:
+        name: sshd
+        start_mode: auto
+        state: started
+
+    - name: Enable firewall rule for SSH
+      win_firewall_rule:
+        name: "OpenSSH"
+        localport: 22
+        protocol: tcp
+        action: allow
+
+    - name: Restart OpenSSH service after firewall rule update
+      win_service:
+        name: sshd
+        state: restarted
