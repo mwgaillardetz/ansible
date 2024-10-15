@@ -1,0 +1,42 @@
+---
+- hosts: kube-master
+  become: yes
+  tasks:
+  - name: Install Docker
+    apt:
+      name: docker.io
+      state: present
+      update_cache: true
+
+  - name: Install apt-transport-https
+    apt:
+      name: apt-transport-https
+      state: present
+
+  - name: Add Kubernetes apt-key
+    apt_key:
+      url: "{{ k8s-apt-key }}"
+      state: present
+
+  - name: Add Kubernetes apt repository
+    apt_repository:
+      repo: "{{ k8s-apt-repo }}"
+      state: present
+      update_cache: true
+
+  - name: Install Kubernetes
+    apt:
+      name: kubelet kubeadm kubectl
+      state: present
+
+  - name: Initialize Kubernetes
+    command: kubeadm init --pod-network-cidr=10.244.0.0/16
+
+- hosts: rancher-server
+  become: yes
+  tasks:
+  - name: Install Rancher
+    shell: kubectl apply -f https://raw.githubusercontent.com/rancher/local-path-provisioner/master/deploy/local-path-storage.yaml
+
+  - name: Install Rancher
+    shell: helm install rancher rancher-stable/rancher --namespace cattle-system --set hostname=rancher.my.org
