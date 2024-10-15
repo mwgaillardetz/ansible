@@ -1,6 +1,6 @@
 ---
 - hosts: kube-master
-  become: yes
+  become: true
   tasks:
   - name: Install Docker
     apt:
@@ -33,7 +33,7 @@
     command: kubeadm init --pod-network-cidr=10.244.0.0/16
 
 - hosts: rancher-server
-  become: yes
+  become: true
   tasks:
   - name: Install Rancher
     shell: kubectl apply -f https://raw.githubusercontent.com/rancher/local-path-provisioner/master/deploy/local-path-storage.yaml

@@ -1,0 +1,75 @@
+---
+- name: Install Ubuntu VM on Hyper-V
+  hosts: windows
+  gather_facts: false
+  tasks:
+    - name: Ensure the Hyper-V role is installed
+      win_feature:
+        name: Hyper-V
+        state: present
+
+    - name: Create a new virtual switch
+      community.windows.win_hyperv_switch:
+        name: "ExternalSwitch"
+        type: external
+        adapter_name: "Ethernet"
+
+    - name: Create a new virtual machine for Ubuntu
+      community.windows.win_hyperv:
+        name: "UbuntuVM"
+        state: present
+        generation: 2
+        memory_mb: 24576
+        cpu_count: 4
+        switch_name: "ExternalSwitch"
+        vhd_path: "C:\\Hyper-V\\UbuntuVM\\UbuntuVM.vhdx"
+        vhd_size_gb: 50
+        vm_path: "C:\\Hyper-V\\UbuntuVM"
+        secure_boot: true
+
+    - name: Download Ubuntu ISO
+      win_get_url:
+        url: "https://releases.ubuntu.com/20.04/ubuntu-20.04.3-live-server-amd64.iso"
+        dest: "C:\\Hyper-V\\UbuntuVM\\ubuntu-20.04.3-live-server-amd64.iso"
+
+    - name: Attach ISO to Ubuntu VM
+      community.windows.win_hyperv_vm:
+        name: "UbuntuVM"
+        state: present
+        dvd_drive:
+          - path: "C:\\Hyper-V\\UbuntuVM\\ubuntu-20.04.3-live-server-amd64.iso"
+
+    - name: Start the Ubuntu virtual machine
+      community.windows.win_hyperv:
+        name: "UbuntuVM"
+        state: running
+
+    - name: Create a new virtual machine for macOS
+      community.windows.win_hyperv:
+        name: "macOSVM"
+        state: present
+        generation: 2
+        memory_mb: 16384
+        cpu_count: 2
+        switch_name: "ExternalSwitch"
+        vhd_path: "C:\\Hyper-V\\macOSVM\\macOSVM.vhdx"
+        vhd_size_gb: 50
+        vm_path: "C:\\Hyper-V\\macOSVM"
+        secure_boot: true
+
+    - name: Download macOS ISO (Placeholder URL)
+      win_get_url:
+        url: "https://example.com/path/to/macos.iso"
+        dest: "C:\\Hyper-V\\macOSVM\\macos.iso"
+
+    - name: Attach ISO to macOS VM
+      community.windows.win_hyperv_vm:
+        name: "macOSVM"
+        state: present
+        dvd_drive:
+          - path: "C:\\Hyper-V\\macOSVM\\macos.iso"
+
+    - name: Start the macOS virtual machine
+      community.windows.win_hyperv:
+        name: "macOS"
+        state: running

@@ -1,0 +1,23 @@
+---
+- name: Update Windows PCs and install patches
+  hosts: windows
+  gather_facts: false
+  tasks:
+    - name: Ensure the Windows Update service is running
+      win_service:
+        name: wuauserv
+        start_mode: auto
+        state: started
+
+    - name: Install all available updates
+      community.windows.win_updates:
+        category_names:
+          - CriticalUpdates
+          - SecurityUpdates
+          - UpdateRollups
+          - Updates
+        reboot: yes
+
+    - name: Reboot if required
+      win_reboot:
+        when: reboot_required

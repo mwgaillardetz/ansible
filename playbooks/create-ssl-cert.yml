@@ -1,0 +1,31 @@
+---
+- name: Create and install SSL certificate on Windows PC
+  hosts: windows
+  gather_facts: false
+  tasks:
+    - name: Ensure the OpenSSL package is installed
+      win_chocolatey:
+        name: openssl
+        state: present
+
+    - name: Generate a private key
+      win_command: openssl genrsa -out C:\certs\private.key 2048
+      args:
+        creates: C:\certs\private.key
+
+    - name: Generate a certificate signing request (CSR)
+      win_command: openssl req -new -key C:\certs\private.key -out C:\certs\request.csr -subj "/CN=yourdomain.com"
+      args:
+        creates: C:\certs\request.csr
+
+    - name: Generate a self-signed certificate
+      win_command: openssl x509 -req -days 365 -in C:\certs\request.csr -signkey C:\certs\private.key -out C:\certs\certificate.crt
+      args:
+        creates: C:\certs\certificate.crt
+
+    - name: Install the self-signed certificate
+      community.windows.win_certificate_store:
+        action: import
+        path: C:\certs\certificate.crt
+        store_name: My
+        state: present
