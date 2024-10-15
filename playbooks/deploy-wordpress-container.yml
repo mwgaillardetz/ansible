@@ -1,0 +1,55 @@
+---
+- name: Setup WordPress with Docker
+  hosts: all
+  become: true
+
+  tasks:
+    - name: Install Docker
+      apt:
+        name: docker.io
+        state: present
+        update_cache: true
+
+    - name: Start Docker service
+      service:
+        name: docker
+        state: started
+        enabled: true
+
+    - name: Pull MySQL image
+      docker_image:
+        name: mysql
+        tag: latest
+        source: pull
+
+    - name: Pull WordPress image
+      docker_image:
+        name: wordpress
+        tag: latest
+        source: pull
+
+    - name: Create MySQL container
+      docker_container:
+        name: wordpress_db
+        image: mysql:latest
+        state: started
+        restart_policy: always
+        env:
+          MYSQL_ROOT_PASSWORD: example
+          MYSQL_DATABASE: wordpress
+          MYSQL_USER: wordpress
+          MYSQL_PASSWORD: "{{ wordpress-pass }}"
+
+    - name: Create WordPress container
+      docker_container:
+        name: wordpress
+        image: wordpress:latest
+        state: started
+        restart_policy: always
+        ports:
+          - "8080:80"
+        env:
+          WORDPRESS_DB_HOST: wordpress_db:3306
+          WORDPRESS_DB_USER: wordpress
+          WORDPRESS_DB_PASSWORD: "{{ wordpress-pass }}"
+          WORDPRESS_DB_NAME: wordpress

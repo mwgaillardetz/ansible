@@ -1,0 +1,33 @@
+---
+- name: Update all running Docker containers
+  hosts: all
+  become: true
+
+  tasks:
+    - name: Get list of all running containers
+      docker_container_info:
+        filters:
+          status: running
+      register: running_containers
+
+    - name: Pull latest images for running containers
+      docker_image:
+        name: "{{ item.Image }}"
+        tag: latest
+        source: pull
+      loop: "{{ running_containers.containers }}"
+      loop_control:
+        label: "{{ item.Name }}"
+
+    - name: Recreate containers with latest images
+      docker_container:
+        name: "{{ item.Name }}"
+        image: "{{ item.Image }}:latest"
+        state: started
+        recreate: true
+        restart_policy: always
+        env: "{{ item.Config.Env }}"
+        ports: "{{ item.HostConfig.PortBindings }}"
+      loop: "{{ running_containers.containers }}"
+      loop_control:
+        label: "{{ item.Name }}"
