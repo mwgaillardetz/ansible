@@ -20,4 +20,3 @@ software:
   - name: winscp
   - name: plexamp
   - name: parsec
-  - name: docker-desktop

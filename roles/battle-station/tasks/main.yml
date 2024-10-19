@@ -40,7 +40,16 @@
   with_items: "{{ software }}"
   tags:
     - software
-    
+
+- name: Install BlockTheSpot for Spotify
+  win_shell: |
+    [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; 
+    Invoke-Expression "& { $(Invoke-WebRequest -UseBasicParsing 'https://raw.githubusercontent.com/mrpond/BlockTheSpot/master/install.ps1') } -UninstallSpotifyStoreEdition -UpdateSpotify"
+  become: true
+  become_method: runas
+  tags:
+    - spotify
+
 - name: Set PowerShell Core as default shell
   win_shell: |
         $registryPath = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\ShellCommandVerb"
