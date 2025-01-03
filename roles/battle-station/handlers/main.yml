@@ -1,2 +1,10 @@
 ---
 # handlers file for battle-station
+handlers:
+  - name: Restart host
+    ansible.builtin.win_reboot:
+      timeout: 3600
+    become: true
+    become_method: runas
+    tags:
+      - wsl
