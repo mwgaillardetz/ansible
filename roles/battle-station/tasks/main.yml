@@ -57,7 +57,7 @@
       become: true
       become_method: runas
 
-- name: Install NetFx3 (needed for wsl) and WSL
+- name: Install NetFx3
   ansible.windows.win_optional_feature:
     name:
       - NetFx3
@@ -79,17 +79,19 @@
   tags:
     - wsl 
 
-- name: Restart the host (if required)
-  win_reboot:
-  become: true
-  become_method: runas
+- name: Check if reboot is required
+  ansible.builtin.debug:
+    msg: "Reboot required: {{ ansible_reboot_pending | bool }}"
+  when: "ansible_reboot_pending is defined"
+
+- name: Notify handler to reboot host (if required)
+  ansible.builtin.meta: flush_handlers
   when: "ansible_reboot_pending | bool"
-  tags:
-    - wsl 
+  notify: Restart host
 
 - name: Download and Install the latest Ubuntu distribution
   win_shell: |
-    $url = 'https://aka.ms/wslubuntu2004'
+    $url = 'https://aka.ms/wslubuntu2204'
     $output = 'C:\temp\Ubuntu.appx'
     Invoke-WebRequest -Uri $url -OutFile $output
     Add-AppxPackage -Path $output
